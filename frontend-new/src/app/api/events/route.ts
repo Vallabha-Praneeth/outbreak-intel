@@ -2,8 +2,24 @@ import { NextResponse } from "next/server"
 import { MOCK_EVENTS } from "@/lib/mock-data/events"
 import { supabase } from "@/lib/supabase"
 import { IntelEvent } from "@/types"
+import { requireAuth } from "@/lib/api-auth"
+import { CACHE_CONFIG, getCacheHeaders } from "@/lib/cache"
+import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limit"
 
 export async function GET(request: Request) {
+    // Verify authentication
+    const auth = await requireAuth()
+    if (!auth.authenticated) {
+        return auth.response
+    }
+
+    // Check rate limit
+    const clientId = getClientIdentifier(request, auth.userId)
+    const rateLimit = checkRateLimit(clientId, 'events')
+    if (!rateLimit.allowed) {
+        return rateLimit.response
+    }
+
     const { searchParams } = new URL(request.url)
     const classification = searchParams.get("classification")
 
@@ -54,10 +70,14 @@ export async function GET(request: Request) {
             tags: []
         }))
 
-        return NextResponse.json(formattedEvents)
+        return NextResponse.json(formattedEvents, {
+            headers: getCacheHeaders(CACHE_CONFIG.events)
+        })
     } catch (err) {
         console.error("Internal Server Error:", err)
-        return NextResponse.json([])
-
+        return NextResponse.json(
+            { error: "Failed to fetch events", message: err instanceof Error ? err.message : "Unknown error" },
+            { status: 500 }
+        )
     }
 }

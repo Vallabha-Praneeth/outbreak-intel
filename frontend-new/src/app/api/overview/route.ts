@@ -1,8 +1,24 @@
 import { NextResponse } from "next/server"
 import { DashboardStats } from "@/types"
 import { supabase } from "@/lib/supabase"
+import { requireAuth } from "@/lib/api-auth"
+import { CACHE_CONFIG, getCacheHeaders } from "@/lib/cache"
+import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limit"
 
-export async function GET() {
+export async function GET(request: Request) {
+    // Verify authentication
+    const auth = await requireAuth()
+    if (!auth.authenticated) {
+        return auth.response
+    }
+
+    // Check rate limit
+    const clientId = getClientIdentifier(request, auth.userId)
+    const rateLimit = checkRateLimit(clientId, 'overview')
+    if (!rateLimit.allowed) {
+        return rateLimit.response
+    }
+
     try {
         // Fetch KPI counts in parallel
         const [signalsRes, diseasesRes, locationsRes] = await Promise.all([
@@ -39,17 +55,14 @@ export async function GET() {
             ]
         }
 
-        return NextResponse.json(stats)
+        return NextResponse.json(stats, {
+            headers: getCacheHeaders(CACHE_CONFIG.overview)
+        })
     } catch (err) {
         console.error("Internal Server Error:", err)
-        // Return default mock stats on error
-        return NextResponse.json({
-            activeSignals: 100,
-            diseasesTracked: 24,
-            locationsAffected: 42,
-            systemHealth: "99.2%",
-            signalTrend: [],
-            sourceDistribution: []
-        })
+        return NextResponse.json(
+            { error: "Failed to fetch overview stats", message: err instanceof Error ? err.message : "Unknown error" },
+            { status: 500 }
+        )
     }
 }

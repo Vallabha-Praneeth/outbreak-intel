@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { Disease } from "@/types"
 import { supabase } from "@/lib/supabase"
+import { requireAuth } from "@/lib/api-auth"
+import { CACHE_CONFIG, getCacheHeaders } from "@/lib/cache"
+import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limit"
 
 const MOCK_DISEASES: Disease[] = [
     {
@@ -47,7 +50,20 @@ const MOCK_DISEASES: Disease[] = [
     }
 ]
 
-export async function GET() {
+export async function GET(request: Request) {
+    // Verify authentication
+    const auth = await requireAuth()
+    if (!auth.authenticated) {
+        return auth.response
+    }
+
+    // Check rate limit
+    const clientId = getClientIdentifier(request, auth.userId)
+    const rateLimit = checkRateLimit(clientId, 'diseases')
+    if (!rateLimit.allowed) {
+        return rateLimit.response
+    }
+
     try {
         const { data, error } = await supabase
             .from("diseases")
@@ -76,9 +92,14 @@ export async function GET() {
             tags: d.tags || []
         }))
 
-        return NextResponse.json(formattedDiseases)
+        return NextResponse.json(formattedDiseases, {
+            headers: getCacheHeaders(CACHE_CONFIG.diseases)
+        })
     } catch (err) {
         console.error("Internal Server Error:", err)
-        return NextResponse.json(MOCK_DISEASES)
+        return NextResponse.json(
+            { error: "Failed to fetch diseases", message: err instanceof Error ? err.message : "Unknown error" },
+            { status: 500 }
+        )
     }
 }
