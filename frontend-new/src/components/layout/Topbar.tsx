@@ -1,7 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { Search, Bell, RefreshCw, Calendar, Command as CommandIcon } from "lucide-react"
+import { Search, Bell, RefreshCw, Calendar, Command as CommandIcon, LogOut, User } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -13,8 +23,17 @@ export function Topbar() {
 
     const [alertCount, setAlertCount] = React.useState(0)
     const [latestAlert, setLatestAlert] = React.useState<string | null>(null)
+    const [userEmail, setUserEmail] = React.useState<string | null>(null)
+    const router = useRouter()
+    const supabase = createClient()
 
     React.useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) setUserEmail(user.email || null)
+        }
+        fetchUser()
+
         const fetchAlerts = () => {
             fetch("/api/alerts")
                 .then(res => res.json())
@@ -41,9 +60,18 @@ export function Topbar() {
         setTimeout(() => setIsRefreshing(false), 2000)
     }
 
+    const handleLogout = async () => {
+        await supabase.auth.signOut()
+        router.push("/login")
+        router.refresh()
+    }
+
+    const initials = userEmail ? userEmail.substring(0, 2).toUpperCase() : "JD"
+
     return (
         <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-border bg-surface-0/80 backdrop-blur-md px-6">
             <div className="flex items-center gap-4 flex-1">
+                {/* Search Bar remains same */}
                 <div className="relative w-full max-w-md hidden md:block group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <div className="flex items-center justify-between w-full h-10 pl-9 pr-3 py-2 rounded-lg bg-surface-1 border border-border text-sm text-muted-foreground hover:border-border/30 transition-colors cursor-pointer relative">
@@ -94,11 +122,30 @@ export function Topbar() {
                         )}
                     </div>
 
-                    <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-intel-cyan to-blue-600 border border-border p-[1px]">
-                        <div className="w-full h-full rounded-full bg-surface-0 flex items-center justify-center font-bold text-xs">
-                            JD
-                        </div>
-                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="relative h-9 w-9 rounded-full bg-gradient-to-tr from-intel-cyan to-blue-600 border border-border p-[1px] overflow-hidden hover:opacity-90">
+                                <div className="w-full h-full rounded-full bg-surface-0 flex items-center justify-center font-bold text-xs">
+                                    {initials}
+                                </div>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                            <DropdownMenuLabel className="font-normal text-xs text-muted-foreground -mt-3 truncate">
+                                {userEmail || "Guest User"}
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                                <User className="mr-2 h-4 w-4" />
+                                <span>Profile</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-intel-red focus:text-intel-red cursor-pointer" onClick={handleLogout}>
+                                <LogOut className="mr-2 h-4 w-4" />
+                                <span>Log out</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
         </header>
