@@ -7,15 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Search, Filter, ShieldCheck, Pill, Thermometer, UserPlus } from "lucide-react"
 
-// Mock disease data based on the XLSX structure
-const diseases = [
-    { id: 1, name: "Ebola Virus Disease", agent: "Ebolavirus", diagnosis: "RT-PCR, ELISA", treatment: "Supportive care, Monoclonal antibodies", vaccine: "Ervebo (rVSV-ZEBOV)", tags: ["Viral Hemorrhagic Fever", "P6"] },
-    { id: 2, name: "Cholera", agent: "Vibrio cholerae", diagnosis: "Stool culture, Rapid test", treatment: "ORS, IV fluids, Antibiotics", vaccine: "Oral Cholera Vaccine (OCV)", tags: ["Waterborne", "Bacterial"] },
-    { id: 3, name: "Mpox", agent: "Mpox virus", diagnosis: "PCR (skin lesion swap)", treatment: "Tecovirimat", vaccine: "JYNNEOS / MVA-BN", tags: ["Zoonotic", "Orthopoxvirus"] },
-    { id: 4, name: "Dengue", agent: "Dengue virus", diagnosis: "NS1 antigen, Serology", treatment: "Symptomatic treatment", vaccine: "Dengvaxia, Qdenga", tags: ["Vector-borne", "Flavivirus"] },
-    { id: 5, name: "Nipah Virus", agent: "Nipah henipavirus", diagnosis: "PCR, ELISA", treatment: "Supportive care", vaccine: "In development", tags: ["Zoonotic", "High Fatality"] },
-    { id: 6, name: "Avian Influenza", agent: "Type A (H5N1, H7N9)", diagnosis: "RT-PCR", treatment: "Oseltamivir", vaccine: "Candidate vaccines available", tags: ["Respiratory", "Pandemic Risk"] },
-]
+
 
 import { Disease } from "@/types"
 import { Skeleton } from "@/components/ui/skeleton"

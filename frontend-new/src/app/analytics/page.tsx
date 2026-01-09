@@ -16,14 +16,22 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-const trendData = [
-    { name: "Week 1", confirmed: 40, early: 120 },
-    { name: "Week 2", confirmed: 55, early: 150 },
-    { name: "Week 3", confirmed: 70, early: 140 },
-    { name: "Week 4", confirmed: 120, early: 210 },
-]
+
 
 export default function AnalyticsPage() {
+    const [trendData, setTrendData] = React.useState<any[]>([])
+
+    const [alert, setAlert] = React.useState<any>(null)
+
+    React.useEffect(() => {
+        fetch("/api/overview").then(res => res.json()).then(d => {
+            if (d.signalTrend) setTrendData(d.signalTrend)
+        })
+        fetch("/api/alerts").then(res => res.json()).then(data => {
+            if (data && data.length > 0) setAlert(data[0])
+        })
+    }, [])
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -73,18 +81,24 @@ export default function AnalyticsPage() {
                         </div>
                     </GlowCard>
 
-                    <GlowCard className="p-6 bg-intel-amber/5 border-intel-amber/20">
-                        <div className="flex items-center gap-2 text-intel-amber mb-2">
-                            <AlertTriangle size={18} />
-                            <h4 className="text-sm font-bold uppercase tracking-widest">Anomaly Detected</h4>
-                        </div>
-                        <p className="text-xs text-muted-foreground font-medium">
-                            214% spike in "Undiagnosed Respiratory" mentions in South Asia cluster.
-                        </p>
-                        <Button variant="outline" size="sm" className="w-full mt-4 border-intel-amber/30 text-intel-amber hover:bg-intel-amber/10">
-                            Run Deep Scan
-                        </Button>
-                    </GlowCard>
+                    {alert ? (
+                        <GlowCard className="p-6 bg-intel-red/5 border-intel-red/20">
+                            <div className="flex items-center gap-2 text-intel-red mb-2">
+                                <AlertTriangle size={18} />
+                                <h4 className="text-sm font-bold uppercase tracking-widest">{alert.severity} Anomaly</h4>
+                            </div>
+                            <p className="text-xs text-muted-foreground font-medium">
+                                {alert.message}
+                            </p>
+                            <Button variant="outline" size="sm" className="w-full mt-4 border-intel-red/30 text-intel-red hover:bg-intel-red/10">
+                                View Report
+                            </Button>
+                        </GlowCard>
+                    ) : (
+                        <GlowCard className="p-6 opacity-50">
+                            <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">No Active Anomalies</h4>
+                        </GlowCard>
+                    )}
                 </div>
             </div>
         </div>

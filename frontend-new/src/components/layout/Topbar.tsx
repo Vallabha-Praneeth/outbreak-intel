@@ -11,6 +11,25 @@ export function Topbar() {
     const [time, setTime] = React.useState<string>("")
     const [isRefreshing, setIsRefreshing] = React.useState(false)
 
+    const [alertCount, setAlertCount] = React.useState(0)
+    const [latestAlert, setLatestAlert] = React.useState<string | null>(null)
+
+    React.useEffect(() => {
+        const fetchAlerts = () => {
+            fetch("/api/alerts")
+                .then(res => res.json())
+                .then(data => {
+                    const critical = data.filter((a: any) => a.severity === 'critical' || a.severity === 'high')
+                    setAlertCount(critical.length)
+                    if (critical.length > 0) setLatestAlert(critical[0].message)
+                })
+        }
+
+        fetchAlerts()
+        const timer = setInterval(fetchAlerts, 10000) // Poll every 10s
+        return () => clearInterval(timer)
+    }, [])
+
     React.useEffect(() => {
         setTime(new Date().toLocaleTimeString())
         const timer = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000)
@@ -62,11 +81,17 @@ export function Topbar() {
                         Last Sync: 2m ago
                     </Button>
 
-                    <div className="relative">
+                    <div className="relative group">
                         <Button variant="ghost" size="icon" className="h-9 w-9 border border-border hover:bg-surface-1 relative">
                             <Bell size={18} />
-                            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-intel-red" />
+                            {alertCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-intel-red animate-pulse" />}
                         </Button>
+                        {latestAlert && (
+                            <div className="absolute right-0 top-12 w-64 bg-surface-1 border border-border p-3 rounded-md shadow-xl text-xs hidden group-hover:block z-50">
+                                <div className="font-bold mb-1 text-intel-red">ALERT: {alertCount} Critical</div>
+                                <div className="text-muted-foreground">{latestAlert}</div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-intel-cyan to-blue-600 border border-border p-[1px]">

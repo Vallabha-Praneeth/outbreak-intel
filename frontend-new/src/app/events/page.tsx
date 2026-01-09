@@ -2,11 +2,24 @@
 
 import React from "react"
 import { IntelTable } from "@/components/dashboard/IntelTable"
-import { MOCK_EVENTS } from "@/lib/mock-data/events"
 import { Button } from "@/components/ui/button"
 import { Download, Share2, Filter, Plus } from "lucide-react"
+import { IntelEvent } from "@/types"
 
 export default function EventsPage() {
+    const [events, setEvents] = React.useState<IntelEvent[]>([])
+    const [loading, setLoading] = React.useState(true)
+
+    React.useEffect(() => {
+        fetch("/api/events")
+            .then(res => res.json())
+            .then(d => {
+                setEvents(d)
+                setLoading(false)
+            })
+            .catch(() => setLoading(false))
+    }, [])
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -41,7 +54,11 @@ export default function EventsPage() {
                 </Button>
             </div>
 
-            <IntelTable data={MOCK_EVENTS} />
+            {loading ? (
+                <div className="text-center py-20 text-muted-foreground">Loading events...</div>
+            ) : (
+                <IntelTable data={events} />
+            )}
         </div>
     )
 }

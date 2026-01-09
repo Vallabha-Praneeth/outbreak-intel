@@ -1,13 +1,16 @@
 import re
+import os
+import json
+import google.generativeai as genai
 from typing import Dict, List, Any, Optional
 
 class EventProcessor:
     """
-    Normalizes raw events using deterministic, explainable rules.
-    Extracts diseases, locations, and assigns classifications.
+    Normalizes raw events.
+    Uses Google Gemini for entity extraction if available, otherwise falls back to Regex.
     """
 
-    # Expanded disease name mapping
+    # Expanded disease name mapping (Fallback)
     DISEASE_KEYWORDS = {
         "Cholera": ["Cholera"],
         "Mpox": ["Mpox", "monkeypox"],
@@ -26,10 +29,6 @@ class EventProcessor:
         "Measles": ["Measles"]
     }
 
-    # Basic country and region mapping
-    # In a real app, this would use a database or GeoJSON, but for this MVP, we'll use common ones
-    # or just extract capitalized words that aren't disease names.
-    # For now, let's add a list of common countries appearing in DONs.
     COUNTRIES = [
         "Afghanistan", "Angola", "Argentina", "Australia", "Bangladesh", "Benin", "Bolivia", "Brazil", 
         "Burkina Faso", "Burundi", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", 
@@ -44,31 +43,65 @@ class EventProcessor:
     ]
 
     def __init__(self):
-        pass
+        self.api_key = os.environ.get("GEMINI_API_KEY")
+        if self.api_key:
+            genai.configure(api_key=self.api_key)
+            self.model = genai.GenerativeModel('gemini-2.0-flash')
+            print("EventProcessor: AI Mode Enabled (Gemini)")
+        else:
+            self.model = None
+            print("EventProcessor: Regex Mode (Fallback) - GEMINI_API_KEY not found")
 
-    def extract_diseases(self, text: str) -> List[str]:
-        """Extract primary diseases mentioned in the text."""
+    def _extract_with_llm(self, text: str) -> Dict[str, Any]:
+        """Extract entities using Gemini API."""
+        prompt = f"""
+        Analyze the following health alert text and extract:
+        1. Primary Diseases mentioned (list of strings). Normalize names (e.g., "H5N1" -> "Avian Influenza").
+        2. Locations mentioned (list of countries).
+        3. A brief 1-sentence assessment reason.
+        4. A confidence score (0.0 to 1.0) regarding if this is an active outbreak.
+
+        Output ONLY valid JSON.
+        
+        Text: "{text[:8000]}"
+        
+        JSON Structure:
+        {{
+            "diseases": ["name"],
+            "locations": ["Country"],
+            "assessment": "reason",
+            "confidence": 0.95
+        }}
+        """
+        try:
+            response = self.model.generate_content(prompt)
+            # Simple cleanup for markdown json blocks if present
+            raw_text = response.text.replace("```json", "").replace("```", "").strip()
+            return json.loads(raw_text)
+        except Exception as e:
+            print(f"LLM Extraction failed: {e}")
+            return None
+
+    def extract_diseases_regex(self, text: str) -> List[str]:
+        """Fallback: Extract primary diseases mentioned in the text."""
         found = []
         for disease, keywords in self.DISEASE_KEYWORDS.items():
             for kw in keywords:
-                if re.search(rf"\b{kw}\b", text, re.I):
+                if re.search(rf"\\b{kw}\\b", text, re.I):
                     found.append(disease)
                     break
-        return found
+        return list(set(found))
 
-    def extract_locations(self, text: str) -> List[str]:
-        """Extract countries mentioned in the text."""
+    def extract_locations_regex(self, text: str) -> List[str]:
+        """Fallback: Extract countries mentioned in the text."""
         found = []
         for country in self.COUNTRIES:
-            if re.search(rf"\b{country}\b", text):
+            if re.search(rf"\\b{country}\\b", text):
                 found.append(country)
-        return found
+        return list(set(found))
 
     def classify_event(self, source_tier: int, content: str, title: str) -> Dict[str, Any]:
-        """
-        Deterministic classification logic.
-        Tier 1 (WHO) is always confirmed_outbreak.
-        """
+        """Deterministic classification logic (Fallback)."""
         classification = "early_signal"
         confidence = 0.5
         reason = "Initial signal"
@@ -96,17 +129,44 @@ class EventProcessor:
 
     def process(self, raw_event: Dict[str, Any], source_tier: int) -> Dict[str, Any]:
         full_text = f"{raw_event['title']} {raw_event['content']}"
-        diseases = self.extract_diseases(full_text)
-        locations = self.extract_locations(full_text)
-        assessment = self.classify_event(source_tier, raw_event['content'], raw_event['title'])
+        
+        # Try LLM First
+        llm_result = None
+        if self.model:
+            llm_result = self._extract_with_llm(full_text)
+            
+        if llm_result:
+            diseases = llm_result.get("diseases", [])
+            locations = llm_result.get("locations", [])
+            assessment_text = llm_result.get("assessment", "AI Analyzed")
+            confidence = float(llm_result.get("confidence", 0.5))
+            
+            # Map LLM confidence to classification
+            classification = "early_signal"
+            if source_tier == 1:
+                classification = "confirmed_outbreak"
+                confidence = 1.0 # Override for official sources
+            elif confidence > 0.8:
+                classification = "confirmed_outbreak"
+            elif confidence < 0.3:
+                classification = "research_update"
+
+        else:
+            # Fallback to Regex
+            diseases = self.extract_diseases_regex(full_text)
+            locations = self.extract_locations_regex(full_text)
+            assessment = self.classify_event(source_tier, raw_event['content'], raw_event['title'])
+            classification = assessment['classification']
+            confidence = assessment['confidence']
+            assessment_text = assessment['reason']
 
         return {
             "title": raw_event['title'],
             "diseases": diseases,
             "locations": locations,
-            "classification": assessment['classification'],
-            "confidence": assessment['confidence'],
-            "assessment_text": assessment['reason'],
-            "raw_event_id": raw_event.get("id"), # To be filled after DB insertion
+            "classification": classification,
+            "confidence": confidence,
+            "assessment_text": assessment_text,
+            "raw_event_id": raw_event.get("id"),
             "source_tier": source_tier
         }

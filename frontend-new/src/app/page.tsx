@@ -12,26 +12,34 @@ import {
 } from "lucide-react"
 import { MetricCard, GlowCard } from "@/components/ui/glow-card"
 import { SignalAreaChart, SourceDonutChart } from "@/components/dashboard/Charts"
-import { MOCK_EVENTS } from "@/lib/mock-data/events"
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-import { DashboardStats } from "@/types"
+import { DashboardStats, IntelEvent } from "@/types"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function OverviewPage() {
   const [data, setData] = React.useState<DashboardStats | null>(null)
   const [loading, setLoading] = React.useState(true)
-  const recentEvents = MOCK_EVENTS.slice(0, 5)
+
+
+  const [events, setEvents] = React.useState<IntelEvent[]>([])
 
   React.useEffect(() => {
-    fetch("/api/overview")
-      .then(res => res.json())
-      .then(d => {
-        setData(d)
-        setLoading(false)
-      })
+    // Parallel fetch for stats and events
+    Promise.all([
+      fetch("/api/overview").then(res => res.json()),
+      fetch("/api/events").then(res => res.json())
+    ]).then(([statsData, eventsData]) => {
+      setData(statsData)
+      setEvents(eventsData.slice(0, 5))
+      setLoading(false)
+    }).catch(err => {
+      console.error("Failed to fetch dashboard data:", err)
+      setLoading(false)
+    })
   }, [])
 
   if (loading || !data) {
@@ -148,7 +156,7 @@ export default function OverviewPage() {
             </Button>
           </div>
           <div className="divide-y divide-border">
-            {recentEvents.map((event) => (
+            {events.map((event) => (
               <div key={event.id} className="p-4 hover:bg-surface-2 transition-colors cursor-pointer group flex items-start justify-between">
                 <div className="flex gap-4">
                   <div className={cn(

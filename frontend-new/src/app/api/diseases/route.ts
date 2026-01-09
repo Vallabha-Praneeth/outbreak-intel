@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { Disease } from "@/types"
+import { supabase } from "@/lib/supabase"
 
 const MOCK_DISEASES: Disease[] = [
     {
@@ -47,5 +48,37 @@ const MOCK_DISEASES: Disease[] = [
 ]
 
 export async function GET() {
-    return NextResponse.json(MOCK_DISEASES)
+    try {
+        const { data, error } = await supabase
+            .from("diseases")
+            .select("*")
+            .order("name", { ascending: true })
+
+        if (error) {
+            console.error("Supabase error:", error)
+            throw error
+        }
+
+        if (!data) return NextResponse.json([])
+
+        const formattedDiseases: Disease[] = data.map(d => ({
+            id: d.id,
+            name: d.name,
+            pathogenAgent: d.pathogen_agent,
+            diagnosticProtocols: d.diagnostic_protocols,
+            symptoms: d.symptoms,
+            treatment: d.treatment,
+            vaccineStatus: d.vaccine_status,
+            classificationReason: d.classification_reason,
+            severityScore: d.severity_score,
+            caseCount: d.case_count,
+            deathCount: d.death_count,
+            tags: d.tags || []
+        }))
+
+        return NextResponse.json(formattedDiseases)
+    } catch (err) {
+        console.error("Internal Server Error:", err)
+        return NextResponse.json(MOCK_DISEASES)
+    }
 }

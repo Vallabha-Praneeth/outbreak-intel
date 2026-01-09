@@ -4,3 +4,9 @@ pydantic==2.10.4
 python-dotenv==1.0.1
 requests==2.32.3
 python-dateutil==2.8.2
+
+beautifulsoup4
+lxml
+pandas
+openpyxl
+google-generativeai
