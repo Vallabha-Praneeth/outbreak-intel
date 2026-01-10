@@ -6,7 +6,6 @@ import {
     getWatchlist,
     addToWatchlist as addItem,
     removeFromWatchlist as removeItem,
-    isInWatchlist as checkItem,
     clearWatchlist as clearAll,
 } from "@/lib/watchlist"
 
@@ -20,31 +19,48 @@ type WatchlistContextType = {
     regions: WatchlistItem[]
 }
 
-const WatchlistContext = createContext<WatchlistContextType | null>(null)
+const defaultContext: WatchlistContextType = {
+    watchlist: [],
+    isWatching: () => false,
+    addToWatchlist: () => {},
+    removeFromWatchlist: () => {},
+    clearWatchlist: () => {},
+    diseases: [],
+    regions: [],
+}
+
+const WatchlistContext = createContext<WatchlistContextType>(defaultContext)
 
 export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
+    const [mounted, setMounted] = useState(false)
 
     // Load watchlist on mount
     useEffect(() => {
         setWatchlist(getWatchlist())
+        setMounted(true)
     }, [])
 
+    // Check if item is watched using state (not localStorage directly)
     const isWatching = useCallback((type: "disease" | "region", name: string) => {
-        return checkItem(type, name)
-    }, [])
+        const id = `${type}-${name.toLowerCase().replace(/\s+/g, "-")}`
+        return watchlist.some(item => item.id === id)
+    }, [watchlist])
 
     const addToWatchlist = useCallback((type: "disease" | "region", name: string) => {
+        if (typeof window === "undefined") return
         const updated = addItem(type, name)
         setWatchlist(updated)
     }, [])
 
     const removeFromWatchlist = useCallback((id: string) => {
+        if (typeof window === "undefined") return
         const updated = removeItem(id)
         setWatchlist(updated)
     }, [])
 
     const clearWatchlist = useCallback(() => {
+        if (typeof window === "undefined") return
         clearAll()
         setWatchlist([])
     }, [])
@@ -52,27 +68,25 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     const diseases = watchlist.filter(item => item.type === "disease")
     const regions = watchlist.filter(item => item.type === "region")
 
+    const value = mounted
+        ? {
+            watchlist,
+            isWatching,
+            addToWatchlist,
+            removeFromWatchlist,
+            clearWatchlist,
+            diseases,
+            regions,
+        }
+        : defaultContext
+
     return (
-        <WatchlistContext.Provider
-            value={{
-                watchlist,
-                isWatching,
-                addToWatchlist,
-                removeFromWatchlist,
-                clearWatchlist,
-                diseases,
-                regions,
-            }}
-        >
+        <WatchlistContext.Provider value={value}>
             {children}
         </WatchlistContext.Provider>
     )
 }
 
 export function useWatchlist() {
-    const context = useContext(WatchlistContext)
-    if (!context) {
-        throw new Error("useWatchlist must be used within a WatchlistProvider")
-    }
-    return context
+    return useContext(WatchlistContext)
 }
