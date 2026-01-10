@@ -145,7 +145,11 @@
   }
 
   .intel-text-gradient {
-    @apply bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-br from-slate-800 to-slate-500 bg-clip-text text-transparent;
+  }
+
+  .dark .intel-text-gradient {
+    @apply from-white to-slate-400;
   }
 
   .noise-overlay {

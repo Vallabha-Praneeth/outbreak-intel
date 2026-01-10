@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Search, Bell, RefreshCw, Calendar, Command as CommandIcon, LogOut, User } from "lucide-react"
+import { Search, Bell, RefreshCw, Calendar, Command as CommandIcon, LogOut, User, Moon, Sun } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import {
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { CommandPalette } from "./CommandPalette"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export function Topbar() {
     const [time, setTime] = React.useState<string>("")
@@ -108,6 +109,8 @@ export function Topbar() {
                         <RefreshCw size={14} className={cn(isRefreshing && "animate-spin")} />
                         Last Sync: 2m ago
                     </Button>
+
+                    <ThemeToggle />
 
                     <div className="relative group">
                         <Button variant="ghost" size="icon" className="h-9 w-9 border border-border hover:bg-surface-1 relative">

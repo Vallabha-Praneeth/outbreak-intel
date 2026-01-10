@@ -13,7 +13,8 @@ import {
     Settings,
     ChevronLeft,
     ChevronRight,
-    Monitor
+    Monitor,
+    Eye
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -22,6 +23,7 @@ const navItems = [
     { icon: LayoutDashboard, label: "Overview", href: "/" },
     { icon: Activity, label: "Events", href: "/events" },
     { icon: Database, label: "Diseases", href: "/diseases" },
+    { icon: Eye, label: "Watchlist", href: "/watchlist" },
     { icon: BarChart3, label: "Analytics", href: "/analytics" },
     { icon: ShieldAlert, label: "System Health", href: "/health" },
     { icon: Bell, label: "Alerts", href: "/alerts" },

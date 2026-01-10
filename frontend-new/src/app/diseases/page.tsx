@@ -5,10 +5,8 @@ import { GlowCard } from "@/components/ui/glow-card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Search, Filter, ShieldCheck, Pill, Thermometer, UserPlus } from "lucide-react"
-
-
-
+import { Search, Filter, ShieldCheck, Pill, Thermometer } from "lucide-react"
+import { WatchButton } from "@/components/ui/watch-button"
 import { Disease } from "@/types"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -101,9 +99,7 @@ export default function DiseasesPage() {
                             <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase tracking-widest text-intel-cyan p-0 h-auto hover:bg-transparent">
                                 View Detail Archive
                             </Button>
-                            <Button size="sm" className="h-8 gap-2 bg-surface-2 border border-border hover:bg-surface-3 text-xs font-bold">
-                                <UserPlus size={14} /> Watch
-                            </Button>
+                            <WatchButton type="disease" name={d.name} variant="full" />
                         </div>
                     </GlowCard>
                 ))}
