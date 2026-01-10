@@ -14,7 +14,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Monitor,
-    Eye
+    Eye,
+    Brain,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -25,6 +26,8 @@ const navItems = [
     { icon: Database, label: "Diseases", href: "/diseases" },
     { icon: Eye, label: "Watchlist", href: "/watchlist" },
     { icon: BarChart3, label: "Analytics", href: "/analytics" },
+    { icon: Brain, label: "Predictions", href: "/predictions" },
+    { icon: Monitor, label: "Data Sources", href: "/data-sources" },
     { icon: ShieldAlert, label: "System Health", href: "/health" },
     { icon: Bell, label: "Alerts", href: "/alerts" },
 ]

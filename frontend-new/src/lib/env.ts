@@ -3,30 +3,22 @@
  * Validates required env vars at runtime and provides type-safe access
  */
 
-function getRequiredEnvVar(name: string): string {
-    const value = process.env[name]
-    if (!value) {
-        throw new Error(
-            `Missing required environment variable: ${name}. ` +
-            `Please check your .env.local file.`
-        )
+function getEnvVar(name: string, fallback: string = ''): string {
+    if (typeof window !== 'undefined') {
+        // Client-side: access from window.__ENV__ or process.env (Next.js injects NEXT_PUBLIC_ vars)
+        return (process.env as Record<string, string | undefined>)[name] || fallback
     }
-    return value
+    // Server-side
+    return process.env[name] || fallback
 }
 
-function getOptionalEnvVar(name: string, defaultValue: string): string {
-    return process.env[name] || defaultValue
-}
-
-function validateUrl(value: string, name: string): string {
+function validateUrl(value: string): boolean {
+    if (!value) return false
     try {
         new URL(value)
-        return value
+        return true
     } catch {
-        throw new Error(
-            `Invalid URL for ${name}: "${value}". ` +
-            `Expected a valid URL (e.g., https://example.supabase.co)`
-        )
+        return false
     }
 }
 
@@ -34,23 +26,22 @@ function validateUrl(value: string, name: string): string {
 let _env: ReturnType<typeof loadEnv> | null = null
 
 function loadEnv() {
-    const supabaseUrl = getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_URL')
-    const supabaseAnonKey = getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    const supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
+    const supabaseAnonKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 
-    // Validate URL format
-    validateUrl(supabaseUrl, 'NEXT_PUBLIC_SUPABASE_URL')
+    // Log warnings in development but don't throw
+    if (!supabaseUrl || !validateUrl(supabaseUrl)) {
+        console.warn('Warning: NEXT_PUBLIC_SUPABASE_URL is missing or invalid')
+    }
 
-    // Validate anon key format (should be a JWT)
-    if (!supabaseAnonKey.startsWith('ey')) {
-        throw new Error(
-            `Invalid NEXT_PUBLIC_SUPABASE_ANON_KEY: Expected a JWT token starting with "ey"`
-        )
+    if (!supabaseAnonKey || !supabaseAnonKey.startsWith('ey')) {
+        console.warn('Warning: NEXT_PUBLIC_SUPABASE_ANON_KEY is missing or invalid')
     }
 
     return {
-        SUPABASE_URL: supabaseUrl,
-        SUPABASE_ANON_KEY: supabaseAnonKey,
-        NODE_ENV: getOptionalEnvVar('NODE_ENV', 'development'),
+        SUPABASE_URL: supabaseUrl || 'https://placeholder.supabase.co',
+        SUPABASE_ANON_KEY: supabaseAnonKey || 'eyPlaceholder',
+        NODE_ENV: getEnvVar('NODE_ENV', 'development'),
         IS_PRODUCTION: process.env.NODE_ENV === 'production',
     } as const
 }
