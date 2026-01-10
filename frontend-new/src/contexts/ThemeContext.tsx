@@ -10,7 +10,13 @@ type ThemeContextType = {
     setTheme: (theme: Theme) => void
 }
 
-const ThemeContext = createContext<ThemeContextType | null>(null)
+const defaultContext: ThemeContextType = {
+    theme: "dark",
+    toggleTheme: () => {},
+    setTheme: () => {},
+}
+
+const ThemeContext = createContext<ThemeContextType>(defaultContext)
 
 const STORAGE_KEY = "outbreak-intel-theme"
 
@@ -18,15 +24,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<Theme>("dark")
     const [mounted, setMounted] = useState(false)
 
-    // Load theme on mount
+    // Load theme on mount and apply dark class initially
     useEffect(() => {
-        setMounted(true)
+        // Apply dark class by default on initial load
+        if (!document.documentElement.classList.contains("dark") &&
+            !document.documentElement.classList.contains("light")) {
+            document.documentElement.classList.add("dark")
+        }
+
         const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
         if (stored) {
             setThemeState(stored)
             document.documentElement.classList.remove("dark", "light")
             document.documentElement.classList.add(stored)
         }
+        setMounted(true)
     }, [])
 
     const setTheme = (newTheme: Theme) => {
@@ -40,22 +52,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setTheme(theme === "dark" ? "light" : "dark")
     }
 
-    // Prevent flash of wrong theme
-    if (!mounted) {
-        return null
-    }
+    // Always render children, but provide default theme until mounted
+    const value = mounted
+        ? { theme, toggleTheme, setTheme }
+        : { theme: "dark" as Theme, toggleTheme: () => {}, setTheme: () => {} }
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+        <ThemeContext.Provider value={value}>
             {children}
         </ThemeContext.Provider>
     )
 }
 
 export function useTheme() {
-    const context = useContext(ThemeContext)
-    if (!context) {
-        throw new Error("useTheme must be used within a ThemeProvider")
-    }
-    return context
+    return useContext(ThemeContext)
 }
