@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { MetricCard, GlowCard } from "@/components/ui/glow-card"
 import { SignalAreaChart, SourceDonutChart } from "@/components/dashboard/Charts"
+import MapWrapper from "@/components/dashboard/MapWrapper"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -142,6 +143,18 @@ export default function OverviewPage() {
           </div>
         </GlowCard>
       </div>
+
+      {/* Global Outbreak Map */}
+      <GlowCard className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-bold">Global Outbreak Map</h3>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mt-1">Real-time geographic distribution of signals</p>
+          </div>
+          <Badge className="bg-intel-cyan/10 text-intel-cyan border-intel-cyan/20">LIVE</Badge>
+        </div>
+        <MapWrapper height="400px" />
+      </GlowCard>
 
       {/* Recent Events List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
